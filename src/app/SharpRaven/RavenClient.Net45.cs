@@ -56,8 +56,13 @@ namespace SharpRaven
         public async Task<string> CaptureAsync(SentryEvent @event)
         {
             @event.Tags = MergeTags(@event.Tags);
+            @event.Breadcrumbs = breadcrumbs;
             var packet = this.jsonPacketFactory.Create(CurrentDsn.ProjectID, @event);
-            return await SendAsync(packet);
+
+            var eventId = await SendAsync(packet);
+            RestartTrails();
+
+            return eventId;
         }
 
 
