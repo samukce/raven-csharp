@@ -28,27 +28,50 @@
 
 #endregion
 
+using System;
+
 using NUnit.Framework;
 
-using SharpRaven.Utilities;
+using SharpRaven.Data;
 
-namespace SharpRaven.UnitTests.Utilities
+namespace SharpRaven.UnitTests.Data
 {
     [TestFixture]
-    public class PacketBuilderTests
+    public class SentryEventTests
     {
         [Test]
-        public void CreateAuthenticationHeader_ReturnsCorrectAuthenticationHeader()
+        public void ShouldWhenConstructorTagsNotNull()
         {
-            const string expected =
-                @"^Sentry sentry_version=[\d], sentry_client=SharpRaven/[\d\.]+, sentry_timestamp=\d+, sentry_key=7d6466e66155431495bdb4036ba9a04b, sentry_secret=4c1cfeab7ebd4c1cb9e18008173a3630$";
-
-            var dsn = new Dsn(
-                "https://7d6466e66155431495bdb4036ba9a04b:4c1cfeab7ebd4c1cb9e18008173a3630@app.getsentry.com/3739");
-
-            var authenticationHeader = PacketBuilder.CreateAuthenticationHeader(dsn);
-
-            Assert.That(authenticationHeader, Is.StringMatching(expected));
+            Assert.That(new SentryEvent(new Exception("foo")).Tags, Is.Not.Null);
         }
+
+        [Test]
+        public void ShouldNotNullDictionaryWhenAssignNullForTags()
+        {
+            var sentryEvent = new SentryEvent(new Exception("foo")) { Tags = null};
+
+            Assert.That(sentryEvent.Tags, Is.Not.Null);
+        }
+
+        [Test]
+        public void ShouldTheSameDictionaryFromConstructor()
+        {
+            var sentryEvent = new SentryEvent(new Exception("foo"));
+            var beforeDictionary = sentryEvent.Tags;
+
+            Assert.That(beforeDictionary, Is.SameAs(sentryEvent.Tags));
+        }
+
+        [Test]
+        public void ShouldStartNewDictionaryWhenAsignNullForTags()
+        {
+            var sentryEvent = new SentryEvent(new Exception("foo"));
+            var beforeDictionary = sentryEvent.Tags;
+
+            sentryEvent.Tags = null;
+
+            Assert.That(beforeDictionary, Is.Not.SameAs(sentryEvent.Tags));
+        }
+
     }
 }

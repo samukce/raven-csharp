@@ -41,12 +41,12 @@ namespace SharpRaven.UnitTests.RavenClientTests {
 
         [Test]
         public void Should_Call_JsonFactory_to_Breadcrumbs() {
-            var breadcrumbsRecord = new Breadcrumb();
+            var breadcrumbsRecord = new Breadcrumb("foo");
 
             var jsonPacketFactory = Substitute.For<IJsonPacketFactory>();
 
             IRavenClient ravenClient = new RavenClientTestable(TestHelper.DsnUri, jsonPacketFactory);
-            
+
             ravenClient.AddTrail(breadcrumbsRecord);
 
             ravenClient.Capture(new SentryEvent(new SentryMessage("foo")));
@@ -60,7 +60,7 @@ namespace SharpRaven.UnitTests.RavenClientTests {
             var jsonPacketFactory = Substitute.For<IJsonPacketFactory>();
 
             IRavenClient ravenClient = new RavenClientTestable(TestHelper.DsnUri, jsonPacketFactory);
-            
+
             ravenClient.Capture(new SentryEvent(new SentryMessage("foo")));
 
             jsonPacketFactory.Received().Create(Arg.Any<string>(),
@@ -86,8 +86,8 @@ namespace SharpRaven.UnitTests.RavenClientTests {
             var jsonPacketFactory = Substitute.For<IJsonPacketFactory>();
 
             IRavenClient ravenClient = new RavenClientTestable(TestHelper.DsnUri, jsonPacketFactory);
-            
-            ravenClient.AddTrail(new Breadcrumb());
+
+            ravenClient.AddTrail(new Breadcrumb("foo"));
             ravenClient.RestartTrails();
 
             ravenClient.Capture(new SentryEvent(new SentryMessage("foo")));
@@ -103,7 +103,7 @@ namespace SharpRaven.UnitTests.RavenClientTests {
             IRavenClient ravenClient = new RavenClientTestable(TestHelper.DsnUri, jsonPacketFactory);
             ravenClient.IgnoreBreadcrumbs = true;
 
-            ravenClient.AddTrail(new Breadcrumb());
+            ravenClient.AddTrail(new Breadcrumb("foo"));
 
             ravenClient.Capture(new SentryEvent(new SentryMessage("foo")));
 
@@ -114,7 +114,7 @@ namespace SharpRaven.UnitTests.RavenClientTests {
 
         [Test]
         public void Should_RestartTrails_After_Send_Package() {
-            var breadcrumbsRecord = new Breadcrumb();
+            var breadcrumbsRecord = new Breadcrumb("foo");
 
             var jsonPacketFactory = Substitute.For<IJsonPacketFactory>();
 
@@ -131,12 +131,13 @@ namespace SharpRaven.UnitTests.RavenClientTests {
                                                 Arg.Is<SentryEvent>(se => se.Breadcrumbs == null));
         }
 
+
         public class RavenClientTestable : RavenClient {
-            public RavenClientTestable(string dsnUri, IJsonPacketFactory jsonPacketFactory1)
-                : base(dsnUri, jsonPacketFactory1) {
+            public RavenClientTestable(string dsnUri, IJsonPacketFactory jsonPacketFactory)
+                : base(dsnUri, jsonPacketFactory) {
 
             }
-            
+
             protected override string Send(JsonPacket packet) {
                 return null;
             }

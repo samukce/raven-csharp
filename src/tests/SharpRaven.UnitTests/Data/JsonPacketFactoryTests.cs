@@ -37,6 +37,7 @@ using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 
 using SharpRaven.Data;
+using SharpRaven.UnitTests.Utilities;
 
 namespace SharpRaven.UnitTests.Data
 {
@@ -115,7 +116,7 @@ namespace SharpRaven.UnitTests.Data
             var json = this.jsonPacketFactory.Create(project, (SentryMessage)null);
 
             Assert.That(json.EventID, Is.Not.Null.Or.Empty, "EventID");
-            Assert.That(Guid.Parse(json.EventID), Is.Not.Null);
+            Assert.That(TestHelper.Parse(json.EventID), Is.Not.Null);
         }
 
 
@@ -210,7 +211,7 @@ namespace SharpRaven.UnitTests.Data
             var json = this.jsonPacketFactory.Create(project, new Exception("Error"));
 
             Assert.That(json.EventID, Is.Not.Null.Or.Empty, "EventID");
-            Assert.That(Guid.Parse(json.EventID), Is.Not.Null);
+            Assert.That(TestHelper.Parse(json.EventID), Is.Not.Null);
         }
 
 
@@ -293,7 +294,7 @@ namespace SharpRaven.UnitTests.Data
             var exception = new Exception("Error");
             
             var json = this.jsonPacketFactory.Create(project, exception);
-            json.Breadcrumbs = new List<Breadcrumb> { new Breadcrumb(BreadcrumbsType.Http) };
+            json.Breadcrumbs = new List<Breadcrumb> { new Breadcrumb("foo", BreadcrumbType.Http) };
 
             var jsonString = JsonConvert.SerializeObject(json, Formatting.Indented);
             Console.WriteLine(jsonString);

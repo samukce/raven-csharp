@@ -35,20 +35,50 @@ using SharpRaven.Utilities;
 namespace SharpRaven.UnitTests.Utilities
 {
     [TestFixture]
-    public class PacketBuilderTests
+    public class CircularBufferTests
     {
         [Test]
-        public void CreateAuthenticationHeader_ReturnsCorrectAuthenticationHeader()
+        public void Should_Create_Empty()
         {
-            const string expected =
-                @"^Sentry sentry_version=[\d], sentry_client=SharpRaven/[\d\.]+, sentry_timestamp=\d+, sentry_key=7d6466e66155431495bdb4036ba9a04b, sentry_secret=4c1cfeab7ebd4c1cb9e18008173a3630$";
+            var circularBuffer = new CircularBuffer<string>();
 
-            var dsn = new Dsn(
-                "https://7d6466e66155431495bdb4036ba9a04b:4c1cfeab7ebd4c1cb9e18008173a3630@app.getsentry.com/3739");
+            Assert.That(circularBuffer.IsEmpty(), Is.True);
+        }
 
-            var authenticationHeader = PacketBuilder.CreateAuthenticationHeader(dsn);
+        [Test]
+        public void Should_Put_One_Item()
+        {
+            var circularBuffer = new CircularBuffer<string>();
 
-            Assert.That(authenticationHeader, Is.StringMatching(expected));
+            circularBuffer.Add("One");
+
+            Assert.That(circularBuffer.ToList().Count, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void Should_Retain_Last_Two_Items()
+        {
+            var circularBuffer = new CircularBuffer<string>(2);
+
+            circularBuffer.Add("One");
+            circularBuffer.Add("Two");
+            circularBuffer.Add("Three");
+
+            Assert.That(circularBuffer.ToList().Count, Is.EqualTo(2));
+            Assert.That(circularBuffer.ToList()[0], Is.EqualTo("Two"));
+            Assert.That(circularBuffer.ToList()[1], Is.EqualTo("Three"));
+        }
+
+        [Test]
+        public void Should_Be_Empty_When_Clear()
+        {
+            var circularBuffer = new CircularBuffer<string>(2);
+
+            circularBuffer.Add("One");
+
+            circularBuffer.Clear();
+
+            Assert.That(circularBuffer.ToList().Count, Is.EqualTo(0));
         }
     }
 }

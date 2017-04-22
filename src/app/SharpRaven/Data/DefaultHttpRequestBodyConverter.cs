@@ -29,85 +29,78 @@
 #endregion
 
 using System;
-using System.Security.Principal;
-
+using System.IO;
+using System.Text;
+#if net35
+using System.Web;
 using SharpRaven.Utilities;
+#endif
 
 namespace SharpRaven.Data
 {
     /// <summary>
-    /// A default implementation of <see cref="ISentryUserFactory"/>. Override the <see cref="OnCreate"/>
-    /// method to adjust the values of the <see cref="SentryUser"/> before it is sent to Sentry.
+    /// The default HTTP media type converter; just returns the HTTP request body as a <see cref="string"/>.
     /// </summary>
-    public class SentryUserFactory : ISentryUserFactory
+    public class DefaultHttpRequestBodyConverter : IHttpRequestBodyConverter
     {
         /// <summary>
-        /// Gets the user.
+        /// Checks whether the specified <paramref name="contentType"/> can be converted by this
+        /// <see cref="IHttpRequestBodyConverter"/> implementation or not.
         /// </summary>
+        /// <param name="contentType">The media type to match.</param>
         /// <returns>
-        /// If an HTTP context is available, an instance of <see cref="SentryUser"/>, otherwise <c>null</c>.
+        /// Returns <c>true</c> if the <see cref="IHttpRequestBodyConverter"/> implementation can convert
+        /// the specified <paramref name="contentType"/> cref="contentType"/>; otherwise <c>false</c>.
         /// </returns>
-        public SentryUser Create()
+        public bool Matches(string contentType)
         {
-            SentryUser user;
-            if (!SentryRequestFactory.HasHttpContext)
-                user = new SentryUser(Environment.UserName);
-            else
-            {
-                user = new SentryUser(GetPrincipal())
-                {
-                    IpAddress = GetIpAddress()
-                };
-            }
-
-            return OnCreate(user);
+            return true;
         }
 
 
         /// <summary>
-        /// Called when the <see cref="SentryUser"/> has been created. Can be overridden to
-        /// adjust the values of the <paramref name="user"/> before it is sent to Sentry.
+        /// Tries to convert the HTTP request body of the specified <paramref name="httpContext"/> to
+        /// a structured type.
         /// </summary>
-        /// <param name="user">The user information.</param>
+        /// <param name="httpContext">The HTTP context containing the request body to convert.</param>
+        /// <param name="converted">
+        /// The converted, structured type for the specified <paramref name="httpContext"/>'s request
+        /// body or <c>null</c> if the <paramref name="httpContext"/> is null, or the somehow conversion
+        /// fails.
+        /// </param>
         /// <returns>
-        /// The <see cref="SentryUser"/>.
+        /// <c>true</c> if the conversion succeeds; otherwise <c>false</c>.
         /// </returns>
-        protected virtual SentryUser OnCreate(SentryUser user)
-        {
-            return user;
-        }
-
         #if net35
-        private static string GetIpAddress()
+        public bool TryConvert(HttpContext httpContext, out object converted)
         #else
-        private static dynamic GetIpAddress()
+        public bool TryConvert(dynamic httpContext, out object converted)
         #endif
         {
+            converted = null;
+
+            if (httpContext == null)
+            {
+                return false;
+            }
+
             try
             {
-                return SentryRequestFactory.HttpContext.Request.UserHostAddress;
+                using (var stream = new MemoryStream())
+                {
+                    httpContext.Request.InputStream.Seek(0, SeekOrigin.Begin);
+                    httpContext.Request.InputStream.CopyTo(stream);
+                    converted = Encoding.UTF8.GetString(stream.ToArray());
+
+                    return true;
+                }
             }
             catch (Exception exception)
             {
-                SystemUtil.WriteError(exception);
+                Console.WriteLine(exception);
             }
 
-            return null;
-        }
-
-
-        private static IPrincipal GetPrincipal()
-        {
-            try
-            {
-                return SentryRequestFactory.HttpContext.User as IPrincipal;
-            }
-            catch (Exception exception)
-            {
-                SystemUtil.WriteError(exception);
-            }
-
-            return null;
+            return false;
         }
     }
 }

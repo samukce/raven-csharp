@@ -28,62 +28,45 @@
 
 #endregion
 
-using System;
-
-namespace SharpRaven.Utilities
+#if net35
+using System.Web;
+#endif
+namespace SharpRaven.Data
 {
     /// <summary>
-    /// Utility class for building 
+    /// HTTP media type interface for converting the HTTP body of a request to a structured type.
     /// </summary>
-    public static class PacketBuilder
+    public interface IHttpRequestBodyConverter
     {
-        private const int SentryVersion = 7;
-        private static readonly string userAgent;
-
-
         /// <summary>
-        /// Initializes the <see cref="PacketBuilder"/> class.
+        /// Checks whether the specified <paramref name="contentType"/> can be converted by this
+        /// <see cref="IHttpRequestBodyConverter"/> implementation or not.
         /// </summary>
-        static PacketBuilder()
-        {
-            var assemblyName = typeof(PacketBuilder).Assembly.GetName();
-            var name = assemblyName.Name;
-            var version = assemblyName.Version;
-            userAgent = String.Format("{0}/{1}", name, version);
-        }
-
-
-        /// <summary>
-        /// Gets the user agent string for Sentry.
-        /// </summary>
-        /// <value>
-        /// The user agent string for Sentry.
-        /// </value>
-        public static string UserAgent
-        {
-            get { return userAgent; }
-        }
-
-
-        /// <summary>
-        /// Creates the authentication header base on the provided <see cref="Dsn"/>.
-        /// </summary>
-        /// <param name="dsn">The DSN.</param>
+        /// <param name="contentType">The media type to match.</param>
         /// <returns>
-        /// The authentication header.
+        /// Returns <c>true</c> if the <see cref="IHttpRequestBodyConverter"/> implementation can convert
+        /// the specified <paramref name="contentType"/> cref="contentType"/>; otherwise <c>false</c>.
         /// </returns>
-        public static string CreateAuthenticationHeader(Dsn dsn)
-        {
-            return String.Format("Sentry sentry_version={0}"
-                                 + ", sentry_client={1}"
-                                 + ", sentry_timestamp={2}"
-                                 + ", sentry_key={3}"
-                                 + ", sentry_secret={4}",
-                                 SentryVersion,
-                                 UserAgent,
-                                 (long)(DateTime.UtcNow - new DateTime(1970, 1, 1)).TotalSeconds,
-                                 dsn.PublicKey,
-                                 dsn.PrivateKey);
-        }
+        bool Matches(string contentType);
+
+
+        /// <summary>
+        /// Tries to convert the HTTP request body of the specified <paramref name="httpContext"/> to
+        /// a structured type.
+        /// </summary>
+        /// <param name="httpContext">The HTTP context containing the request body to convert.</param>
+        /// <param name="converted">
+        /// The converted, structured type for the specified <paramref name="httpContext"/>'s request
+        /// body or <c>null</c> if the <paramref name="httpContext"/> is null, or the somehow conversion
+        /// fails.
+        /// </param>
+        /// <returns>
+        /// <c>true</c> if the conversion succeeds; otherwise <c>false</c>.
+        /// </returns>
+        #if net35
+        bool TryConvert(HttpContext httpContext, out object converted);
+        #else
+        bool TryConvert(dynamic httpContext, out object converted);
+        #endif
     }
 }

@@ -29,72 +29,73 @@
 #endregion
 
 using System;
-using System.Diagnostics;
-using System.Linq;
-using System.Text;
 
 using Newtonsoft.Json;
 
 namespace SharpRaven.Data
 {
     /// <summary>
-    /// Represents Sentry's version of an <see cref="Exception"/>'s stack trace.
+    /// Contains <see cref="string"/> representations of a <see cref="JsonPacket"/>.
     /// </summary>
-    public class SentryStacktrace
+    public class RequestData
     {
+        private readonly Requester requester;
+        private string formatted;
+        private string raw;
+        private string scrubbed;
+
+
         /// <summary>
-        /// Initializes a new instance of the <see cref="SentryStacktrace"/> class.
+        /// Initializes a new instance of the <see cref="RequestData"/> class.
         /// </summary>
-        /// <param name="exception">The <see cref="Exception"/>.</param>
-        public SentryStacktrace(Exception exception)
+        /// <param name="requester">The <see cref="Requester"/> in which the request data will be used.</param>
+        internal RequestData(Requester requester)
         {
-            if (exception == null)
-                return;
+            if (requester == null)
+                throw new ArgumentNullException("requester");
 
-            var trace = new StackTrace(exception, true);
-            var frames = trace.GetFrames();
+            if (requester.Packet == null)
+                throw new ArgumentException("Requester.Packet was null", "requester");
 
-            if (frames == null)
-                return;
-
-            // Sentry expects the frames to be sent in reversed order
-            Frames = frames.Reverse().Select(f => new ExceptionFrame(f)).ToArray();
+            this.requester = requester;
         }
 
 
         /// <summary>
-        /// Gets or sets the <see cref="Exception"/> frames.
+        /// Gets the <see cref="JsonPacket"/> converted to a <see cref="System.String"/> before
+        /// being scrubbed by <see cref="SharpRaven.Logging.IScrubber"/>.
         /// </summary>
-        /// <value>
-        /// The <see cref="Exception"/> frames.
-        /// </value>
-        [JsonProperty(PropertyName = "frames")]
-        public ExceptionFrame[] Frames { get; set; }
+        public string Raw
+        {
+            get { return this.raw = this.raw ?? this.requester.Packet.ToString(Formatting.None); }
+        }
+
+        /// <summary>
+        /// Gets the <see cref="JsonPacket"/> converted to a <see cref="System.String"/> after
+        /// being scrubbed by <see cref="M:IRavenClient.LogScubber"/>. If <see cref="M:IRavenClient.LogScubber"/>
+        /// is null, <see cref="Raw"/> will be returned.
+        /// </summary>
+        public string Scrubbed
+        {
+            get
+            {
+                if (this.requester.Client == null || this.requester.Client.LogScrubber == null)
+                    return Raw;
+
+                return this.scrubbed = this.scrubbed ?? this.requester.Client.LogScrubber.Scrub(Raw);
+            }
+        }
 
 
         /// <summary>
-        /// Returns a <see cref="System.String" /> that represents this instance.
+        /// Gets a <see cref="System.String"/> representation of the <see cref="RequestData"/>.
         /// </summary>
         /// <returns>
-        /// A <see cref="System.String" /> that represents this instance.
+        /// A <see cref="System.String"/> representation of the <see cref="RequestData"/>.
         /// </returns>
         public override string ToString()
         {
-            if (Frames == null || !Frames.Any())
-                return String.Empty;
-
-            StringBuilder sb = new StringBuilder();
-
-            // Have to reverse the frames before presenting them 
-            // since they are stored in reversed order.
-            foreach (var frame in Frames.Reverse())
-            {
-                sb.Append("   at ");
-                sb.Append(frame);
-                sb.AppendLine();
-            }
-
-            return sb.ToString();
+            return this.formatted = this.formatted ?? this.requester.Packet.ToString(Formatting.Indented);
         }
     }
 }
